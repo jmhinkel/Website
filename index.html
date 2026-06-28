@@ -84,7 +84,7 @@ h1{font-family:'Zilla Slab',serif;font-weight:700;font-size:clamp(1.8rem,4.5vw,2
     <a class="back" href="index.html#money">← Back to Sound Money</a>
     <p class="kicker">Sound money / hard assets</p>
     <h1>Gold Signal Dashboard</h1>
-    <p class="lede">A 16-indicator composite scoring the gold environment 0–100 across five tiers. Five market-price indicators pull live quotes directly in your browser when this page loads — no server, no manual update. The rest are inherently qualitative (central bank demand, Fed stance, geopolitical risk) and stay as sliders you set yourself.</p>
+    <p class="lede">A 16-indicator composite scoring the gold environment 0–100 across five tiers. Nine indicators update automatically from a scheduled data feed (prices via Stooq, real rates and inflation expectations via FRED) — no manual entry. The remaining seven are inherently qualitative (central bank demand, Fed stance, geopolitical risk, etc.) and stay as sliders you set yourself.</p>
     <div class="statusbar">
       <div class="asof loading" id="statusPill"><span class="dot"></span><span id="statusText">Fetching live quotes…</span></div>
       <button class="refresh" onclick="fetchLive()">↻ Refresh now</button>
@@ -98,7 +98,7 @@ h1{font-family:'Zilla Slab',serif;font-weight:700;font-size:clamp(1.8rem,4.5vw,2
     <div class="snap"><div class="slabel">GDX (miners)</div><div class="sval" id="snap-gdx">—</div><div class="schg" id="snap-gdx-chg"></div></div>
     <div class="snap"><div class="slabel">WTI crude</div><div class="sval" id="snap-wti">—</div><div class="schg" id="snap-wti-chg"></div></div>
   </div>
-  <p class="snapnote">Live quotes via Stooq end-of-day/delayed feed. <span class="tag live">live</span> indicators below move with these; <span class="tag manual">manual</span> indicators are set by hand.</p>
+  <p class="snapnote">Auto-updated from the scheduled data feed. <span class="tag live">live</span> indicators below move with this data; <span class="tag manual">manual</span> indicators are set by hand.</p>
 
   <div class="score-band">
     <div class="scorewrap">
@@ -117,7 +117,7 @@ h1{font-family:'Zilla Slab',serif;font-weight:700;font-size:clamp(1.8rem,4.5vw,2
   <div id="tiers"></div>
 
   <p class="fine">Educational tool, not a trading signal or investment recommendation. Weighting reflects an empirical view of correlation with 6-month gold returns and is a personal framework, not Center Street Partners or LPL Financial guidance.</p>
-  <p class="sources">Live price data: Stooq (delayed/EOD feed, fetched directly by your browser — no key, no server). If a quote fails to load, the indicator falls back to its last good reading and is marked stale. Qualitative indicators (Fed stance, central bank demand, GPR, COT, SGE premium) are not available as free live feeds and remain manual.</p>
+  <p class="sources">Data feed: prices from Stooq, real rates &amp; inflation expectations from FRED — fetched by a scheduled GitHub Action (hourly on weekdays) and read from this site's own data.json, so there's no CORS dependency, no API key, and no third-party proxy. Qualitative indicators (Fed stance, central bank demand, GPR, COT, SGE premium, CPI surprise, fiscal deficit) have no free real-time feed and remain manual.</p>
 </div>
 
 <script>
@@ -194,62 +194,19 @@ function setSlider(id, val){
 }
 
 /* ---------- Data fetch ----------
-   PRIMARY: your Cloudflare Worker (gold-proxy-worker.js). It fetches every
-   automatable indicator server-side and returns one JSON blob with CORS
-   enabled. Paste its URL below once deployed.
+   The page reads its OWN data.json — written by the GitHub Action
+   (scripts/fetch_data.py) on a schedule. Same website, same origin, so
+   there is NO CORS issue, no proxy, no API key, no third-party service.
 
-   FALLBACK (no Worker yet): the page tries public CORS proxies for the
-   Stooq PRICE indicators only. FRED-based indicators (real rates,
-   breakevens) need the Worker and stay at their defaults until it's live.
+   To see/refresh the data: the Action runs hourly on weekdays, on every
+   push, and on demand from the repo's Actions tab. Open data.json in your
+   repo to see which indicators returned ok:true.                          */
 
-   Open your Worker URL in a browser to SEE which symbols return data —
-   any price showing ok:false means that Stooq ticker needs correcting in
-   the Worker's STOOQ map.                                                  */
-
-// Paste your deployed Worker URL here, e.g. "https://gold-proxy.yourname.workers.dev"
-const WORKER_URL = ""; // <-- leave "" until the Worker is live
-
-const PUBLIC_PROXIES = [
-  base => base,
-  base => 'https://corsproxy.io/?url=' + encodeURIComponent(base),
-  base => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(base)
-];
-const FALLBACK_SYMS = { gold:"xauusd", silver:"xagusd", dxy:"usdindx", gdx:"gdx.us", wti:"cl.f", copper:"hg.f", gvz:"^gvz" };
-
-function parseStooqCsv(text){
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) throw new Error('empty');
-  const c = lines[1].split(',');
-  const open = parseFloat(c[3]), close = parseFloat(c[6]);
-  if (isNaN(close) || close <= 0) throw new Error('bad data');
-  return { ok:true, close, open, pct: open ? ((close-open)/open)*100 : 0 };
-}
-async function fetchStooqFallback(sym){
-  const base = `https://stooq.com/q/l/?s=${sym}&f=sd2t2ohlc&h&e=csv`;
-  let lastErr;
-  for (const wrap of PUBLIC_PROXIES){
-    try {
-      const res = await fetch(wrap(base), { cache:'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return parseStooqCsv(await res.text());
-    } catch(e){ lastErr = e; }
-  }
-  return { ok:false, error: String(lastErr && lastErr.message || lastErr) };
-}
-
-// Returns a unified data object: { prices:{gold,silver,dxy,gdx,wti,copper,gvz}, fred:{realRate,breakeven} }
 async function getData(){
-  if (WORKER_URL){
-    const res = await fetch(WORKER_URL, { cache:'no-store' });
-    if (!res.ok) throw new Error('Worker HTTP ' + res.status);
-    return await res.json();
-  }
-  // Fallback: public proxies, prices only
-  const prices = {};
-  await Promise.all(Object.entries(FALLBACK_SYMS).map(async ([k,s]) => {
-    prices[k] = await fetchStooqFallback(s);
-  }));
-  return { prices, fred: { realRate:{ok:false}, breakeven:{ok:false} }, fallback:true };
+  // cache-bust so a fresh data.json is picked up immediately
+  const res = await fetch('./data.json?t=' + Date.now(), { cache:'no-store' });
+  if (!res.ok) throw new Error('data.json not found — run the GitHub Action once');
+  return await res.json();
 }
 
 const clamp = v => Math.max(0, Math.min(100, v));
@@ -296,14 +253,14 @@ async function fetchLive(){
     const y = f.realRate.value;
     setSlider('realrate', clamp(50 + (1.5 - y)*20));
     setReading('realrate', `DFII10 ${y.toFixed(2)}% (${f.realRate.date}) — ${y>1.5?'restrictive, headwind':'supportive'}`);
-  } else setReading('realrate', WORKER_URL ? 'Feed failed — last value held' : 'Needs the Worker (FRED) — deploy to activate');
+  } else setReading('realrate', 'Feed failed — check FRED series in data.json');
 
   // 5y5y breakeven (T5YIFR): higher = more inflation priced = bullish gold. Neutral ~2.3%.
   if (ok(f.breakeven)){
     const b = f.breakeven.value;
     setSlider('breakeven', clamp(50 + (b - 2.3)*30));
     setReading('breakeven', `T5YIFR ${b.toFixed(2)}% (${f.breakeven.date})`);
-  } else setReading('breakeven', WORKER_URL ? 'Feed failed — last value held' : 'Needs the Worker (FRED) — deploy to activate');
+  } else setReading('breakeven', 'Feed failed — check FRED series in data.json');
 
   // DXY: stronger dollar = bearish gold (today's move).
   if (ok(p.dxy)){
@@ -345,16 +302,18 @@ async function fetchLive(){
 
   // ----- Status -----
   const now = new Date();
-  if (data.fallback && (!ok(f.realRate))){
-    pill.className = fails>0 ? 'asof stale' : 'asof';
-    statusText.textContent = (fails>0 ? `${fails}/${total} prices failed · ` : 'Prices live · ') +
-      'FRED indicators need the Worker · ' + now.toLocaleTimeString();
-  } else if (fails > 0){
+  // Show how old the committed data is (from asOf), plus any failed feeds.
+  let ageText = '';
+  if (data.asOf){
+    const mins = Math.round((Date.now() - new Date(data.asOf).getTime())/60000);
+    ageText = mins < 90 ? `data ${mins}m old` : `data ${Math.round(mins/60)}h old`;
+  }
+  if (fails > 0){
     pill.className = 'asof stale';
-    statusText.textContent = `${fails}/${total} feeds failed — last good data · ` + now.toLocaleTimeString();
+    statusText.textContent = `${fails}/${total} feeds failed — check ticker in data.json · ${ageText}`;
   } else {
     pill.className = 'asof';
-    statusText.textContent = 'Live — updated ' + now.toLocaleTimeString();
+    statusText.textContent = `Live · ${ageText} · checked ${now.toLocaleTimeString()}`;
   }
 
   compute();

@@ -1,0 +1,17 @@
+{
+  "asOf": "2026-06-26T20:00:00Z",
+  "_note": "Seed values from June 26, 2026. The GitHub Action overwrites this on its next run.",
+  "prices": {
+    "gold":   { "ok": true, "close": 4050.07, "open": 4026.0,  "pct": 0.60, "date": "2026-06-26", "symbol": "xauusd" },
+    "silver": { "ok": true, "close": 58.77,   "open": 57.83,   "pct": 1.63, "date": "2026-06-26", "symbol": "xagusd" },
+    "dxy":    { "ok": true, "close": 101.41,  "open": 101.58,  "pct": -0.17,"date": "2026-06-26", "symbol": "usdindx" },
+    "gdx":    { "ok": true, "close": 75.71,   "open": 78.20,   "pct": -3.18,"date": "2026-06-26", "symbol": "gdx.us" },
+    "wti":    { "ok": true, "close": 71.00,   "open": 71.90,   "pct": -1.25,"date": "2026-06-26", "symbol": "cl.f" },
+    "copper": { "ok": true, "close": 4.85,    "open": 4.84,    "pct": 0.21, "date": "2026-06-26", "symbol": "hg.f" },
+    "gvz":    { "ok": true, "close": 22.50,   "open": 22.10,   "pct": 1.81, "date": "2026-06-26", "symbol": "^gvz" }
+  },
+  "fred": {
+    "realRate":  { "ok": true, "value": 2.15, "date": "2026-06-18", "series": "DFII10" },
+    "breakeven": { "ok": true, "value": 2.30, "date": "2026-06-18", "series": "T5YIFR" }
+  }
+}
