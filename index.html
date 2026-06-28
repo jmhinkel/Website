@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gold Signal Dashboard — Jay Hinkel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Spectral:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1d332e; --ink-soft:#4a635b; --paper:#faf8f2; --card:#ffffff;
+  --line:#e4dfd2; --gold:#b8862b; --gold-soft:#f1e7d2;
+  --pos:#3b6d11; --pos-bg:#eaf3de; --neg:#9c3a2e; --neg-bg:#f6e6e2; --neu:#8a7a3a; --neu-bg:#f1e9d2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:'Spectral',Georgia,serif;font-size:16.5px;line-height:1.6;padding-bottom:80px}
+.wrap{max-width:960px;margin:0 auto;padding:0 26px}
+a{color:var(--ink-soft);text-decoration-color:var(--gold)}
+.mono{font-family:'IBM Plex Mono',monospace}
+header{padding:48px 0 24px}
+.back{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--line);border-radius:999px;padding:8px 18px;color:var(--ink-soft);text-decoration:none;display:inline-block;margin-bottom:26px}
+.back:hover{border-color:var(--gold);color:var(--gold)}
+.kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+h1{font-family:'Zilla Slab',serif;font-weight:700;font-size:clamp(1.8rem,4.5vw,2.6rem);margin-bottom:10px}
+.lede{color:var(--ink-soft);max-width:62ch}
+.statusbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:18px}
+.asof{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);
+  background:var(--gold-soft);padding:6px 14px;border-radius:999px;
+}
+.asof .dot{width:7px;height:7px;border-radius:50%;background:var(--pos)}
+.asof.stale .dot{background:var(--neg)}
+.asof.loading .dot{background:var(--neu);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.refresh{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:none;border:1px solid var(--line);border-radius:999px;padding:6px 16px;color:var(--ink-soft);cursor:pointer}
+.refresh:hover{border-color:var(--gold);color:var(--gold)}
+
+.score-band{display:flex;gap:24px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 30px;margin:28px 0}
+.scoreval{font-family:'Zilla Slab',serif;font-weight:700;font-size:3.4rem;line-height:1}
+.scorewrap{min-width:140px}
+.scorelabel{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+.signal-badge{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:6px 16px;border-radius:999px;display:inline-block;margin-top:6px}
+.bull{background:var(--pos-bg);color:var(--pos)}
+.bear{background:var(--neg-bg);color:var(--neg)}
+.neutral{background:var(--neu-bg);color:var(--neu)}
+.meter{flex:1;min-width:220px}
+.meter-track{height:14px;border-radius:999px;background:var(--gold-soft);position:relative;overflow:hidden}
+.meter-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--neg),var(--neu),var(--pos));transition:width .25s ease}
+.meter-ticks{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-top:6px}
+
+.snapshot{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}
+.snap{background:var(--card);padding:16px 18px}
+.snap .slabel{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+.snap .sval{font-family:'Zilla Slab',serif;font-weight:600;font-size:1.3rem}
+.snap .schg{font-family:'IBM Plex Mono',monospace;font-size:11px;margin-top:3px}
+.up{color:var(--pos)}.down{color:var(--neg)}
+.snapnote{font-size:.78rem;color:var(--ink-soft);margin-bottom:30px}
+
+.tier{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:18px}
+.tier h2{font-family:'Zilla Slab',serif;font-size:1.15rem;font-weight:600;margin-bottom:4px}
+.tier .tierweight{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+.ind{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:14px;padding:14px 0;border-top:1px dotted var(--line)}
+.ind:first-of-type{border-top:none}
+.ind label{font-size:.95rem}
+.ind .w{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft)}
+.ind .tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.tag.live{background:var(--pos-bg);color:var(--pos)}
+.tag.manual{background:var(--gold-soft);color:var(--gold)}
+.ind .reading{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);display:block;margin-top:2px}
+.ind input[type=range]{width:100%;accent-color:var(--gold)}
+.ind .val{font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;color:var(--ink-soft)}
+
+.fine{font-size:.82rem;color:var(--ink-soft);margin-top:30px;max-width:66ch}
+.reset{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--line);border-radius:999px;padding:8px 18px;color:var(--ink-soft);cursor:pointer;margin:0 10px 30px 0}
+.reset:hover{border-color:var(--gold);color:var(--gold)}
+.sources{font-size:.8rem;color:var(--ink-soft);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="index.html#money">← Back to Sound Money</a>
+    <p class="kicker">Sound money / hard assets</p>
+    <h1>Gold Signal Dashboard</h1>
+    <p class="lede">A 16-indicator composite scoring the gold environment 0–100 across five tiers. Five market-price indicators pull live quotes directly in your browser when this page loads — no server, no manual update. The rest are inherently qualitative (central bank demand, Fed stance, geopolitical risk) and stay as sliders you set yourself.</p>
+    <div class="statusbar">
+      <div class="asof loading" id="statusPill"><span class="dot"></span><span id="statusText">Fetching live quotes…</span></div>
+      <button class="refresh" onclick="fetchLive()">↻ Refresh now</button>
+    </div>
+  </header>
+
+  <div class="snapshot" id="snapshotGrid">
+    <div class="snap"><div class="slabel">Gold spot</div><div class="sval" id="snap-gold">—</div><div class="schg" id="snap-gold-chg"></div></div>
+    <div class="snap"><div class="slabel">Silver spot</div><div class="sval" id="snap-silver">—</div><div class="schg" id="snap-silver-chg"></div></div>
+    <div class="snap"><div class="slabel">US Dollar Index</div><div class="sval" id="snap-dxy">—</div><div class="schg" id="snap-dxy-chg"></div></div>
+    <div class="snap"><div class="slabel">GDX (miners)</div><div class="sval" id="snap-gdx">—</div><div class="schg" id="snap-gdx-chg"></div></div>
+    <div class="snap"><div class="slabel">WTI crude</div><div class="sval" id="snap-wti">—</div><div class="schg" id="snap-wti-chg"></div></div>
+  </div>
+  <p class="snapnote">Live quotes via Stooq end-of-day/delayed feed. <span class="tag live">live</span> indicators below move with these; <span class="tag manual">manual</span> indicators are set by hand.</p>
+
+  <div class="score-band">
+    <div class="scorewrap">
+      <div class="scorelabel">Composite score</div>
+      <div class="scoreval" id="scoreVal">—</div>
+      <div class="signal-badge neutral" id="signalBadge">Neutral</div>
+    </div>
+    <div class="meter">
+      <div class="meter-track"><div class="meter-fill" id="meterFill" style="width:50%"></div></div>
+      <div class="meter-ticks"><span>Bearish</span><span>Neutral</span><span>Bullish</span></div>
+    </div>
+  </div>
+
+  <button class="reset" onclick="resetManual()">Reset manual sliders to neutral</button>
+
+  <div id="tiers"></div>
+
+  <p class="fine">Educational tool, not a trading signal or investment recommendation. Weighting reflects an empirical view of correlation with 6-month gold returns and is a personal framework, not Center Street Partners or LPL Financial guidance.</p>
+  <p class="sources">Live price data: Stooq (delayed/EOD feed, fetched directly by your browser — no key, no server). If a quote fails to load, the indicator falls back to its last good reading and is marked stale. Qualitative indicators (Fed stance, central bank demand, GPR, COT, SGE premium) are not available as free live feeds and remain manual.</p>
+</div>
+
+<script>
+/* ---------- Indicator definitions ----------
+   type:"live" -> set automatically from the Worker's data feed
+   type:"manual" -> no free real-time feed exists; you set these by hand     */
+const TIERS = [
+  { name: "Core Macro", weightLabel: "9 pts", indicators: [
+    { id:"realrate", name: "Real rates (10yr TIPS / DFII10)", weight: 5, type:"live", default: 40 },
+    { id:"dxy", name: "US Dollar Index (DXY)", weight: 3, type:"live", default: 50 },
+    { id:"fed", name: "Fed policy path (hawkish ↔ dovish)", weight: 1, type:"manual", default: 30, note: "Qualitative — set after each FOMC meeting." },
+  ]},
+  { name: "Inflation & Fiscal", weightLabel: "6 pts", indicators: [
+    { id:"breakeven", name: "5yr5yr inflation breakeven (T5YIFR)", weight: 3, type:"live", default: 45 },
+    { id:"cpi", name: "CPI / PCE surprise (vs. expectations)", weight: 1, type:"manual", default: 50, note: "No free feed — set after each CPI/PCE print." },
+    { id:"deficit", name: "Fiscal deficit trend", weight: 2, type:"manual", default: 60, note: "Slow-moving — set from Treasury monthly statement." },
+  ]},
+  { name: "Positioning & Sentiment", weightLabel: "4 pts", indicators: [
+    { id:"cot", name: "COT net long positioning", weight: 1, type:"manual", default: 45, note: "Weekly CFTC release — set manually (or upgrade Worker to pull it)." },
+    { id:"etfflows", name: "Gold ETF flows", weight: 2, type:"manual", default: 35, note: "No free feed — set from WGC / issuer flow data." },
+    { id:"gvz", name: "Gold volatility (GVZ)", weight: 1, type:"live", default: 50 },
+  ]},
+  { name: "Cross-Asset", weightLabel: "7 pts", indicators: [
+    { id:"sgratio", name: "Silver/Gold ratio", weight: 2, type:"live", default: 50 },
+    { id:"copper", name: "Copper price trend", weight: 1, type:"live", default: 50 },
+    { id:"gdxgold", name: "GDX vs. gold (miner leverage)", weight: 3, type:"live", default: 50 },
+    { id:"wti", name: "WTI crude trend", weight: 1, type:"live", default: 50 },
+  ]},
+  { name: "Structural Demand", weightLabel: "7 pts", indicators: [
+    { id:"cbdemand", name: "Central bank gold demand", weight: 4, type:"manual", default: 70, note: "Quarterly (World Gold Council) — set each release." },
+    { id:"sge", name: "Shanghai Gold Exchange premium", weight: 1, type:"manual", default: 55, note: "No free feed — set manually." },
+    { id:"gpr", name: "Geopolitical Risk Index (GPR)", weight: 2, type:"manual", default: 45, note: "Monthly index — set manually." },
+  ]},
+];
+
+let allInputs = []; // {id, weight, invert, type}
+
+function buildUI(){
+  const tiersEl = document.getElementById('tiers');
+  TIERS.forEach(tier => {
+    const tierDiv = document.createElement('div');
+    tierDiv.className = 'tier';
+    tierDiv.innerHTML = `<h2>${tier.name}</h2><div class="tierweight">Weight: ${tier.weightLabel}</div>`;
+    tier.indicators.forEach(ind => {
+      const row = document.createElement('div');
+      row.className = 'ind';
+      const tagHtml = ind.type === 'live'
+        ? `<span class="tag live">live</span>`
+        : `<span class="tag manual">manual</span>`;
+      row.innerHTML = `
+        <label for="s_${ind.id}">${ind.name} <span class="w">(×${ind.weight})</span>${tagHtml}<span class="reading" id="reading_${ind.id}">${ind.note || (ind.type==='live' ? 'Loading…' : 'Set manually')}</span></label>
+        <input type="range" id="s_${ind.id}" min="0" max="100" value="${ind.default}" ${ind.type==='live' ? 'data-live="1"' : ''}>
+        <span class="val" id="v_${ind.id}">${ind.default}</span>
+      `;
+      tierDiv.appendChild(row);
+      allInputs.push({ id: ind.id, weight: ind.weight, invert: !!ind.invert, type: ind.type, default: ind.default, symbol: ind.symbol });
+    });
+    tiersEl.appendChild(tierDiv);
+  });
+
+  allInputs.forEach(s => {
+    document.getElementById('s_' + s.id).addEventListener('input', compute);
+  });
+}
+
+function setReading(id, text){
+  const el = document.getElementById('reading_' + id);
+  if (el) el.textContent = text;
+}
+function setSlider(id, val){
+  const el = document.getElementById('s_' + id);
+  const v = document.getElementById('v_' + id);
+  if (el) { el.value = Math.max(0, Math.min(100, Math.round(val))); v.textContent = el.value; }
+}
+
+/* ---------- Data fetch ----------
+   PRIMARY: your Cloudflare Worker (gold-proxy-worker.js). It fetches every
+   automatable indicator server-side and returns one JSON blob with CORS
+   enabled. Paste its URL below once deployed.
+
+   FALLBACK (no Worker yet): the page tries public CORS proxies for the
+   Stooq PRICE indicators only. FRED-based indicators (real rates,
+   breakevens) need the Worker and stay at their defaults until it's live.
+
+   Open your Worker URL in a browser to SEE which symbols return data —
+   any price showing ok:false means that Stooq ticker needs correcting in
+   the Worker's STOOQ map.                                                  */
+
+// Paste your deployed Worker URL here, e.g. "https://gold-proxy.yourname.workers.dev"
+const WORKER_URL = ""; // <-- leave "" until the Worker is live
+
+const PUBLIC_PROXIES = [
+  base => base,
+  base => 'https://corsproxy.io/?url=' + encodeURIComponent(base),
+  base => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(base)
+];
+const FALLBACK_SYMS = { gold:"xauusd", silver:"xagusd", dxy:"usdindx", gdx:"gdx.us", wti:"cl.f", copper:"hg.f", gvz:"^gvz" };
+
+function parseStooqCsv(text){
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) throw new Error('empty');
+  const c = lines[1].split(',');
+  const open = parseFloat(c[3]), close = parseFloat(c[6]);
+  if (isNaN(close) || close <= 0) throw new Error('bad data');
+  return { ok:true, close, open, pct: open ? ((close-open)/open)*100 : 0 };
+}
+async function fetchStooqFallback(sym){
+  const base = `https://stooq.com/q/l/?s=${sym}&f=sd2t2ohlc&h&e=csv`;
+  let lastErr;
+  for (const wrap of PUBLIC_PROXIES){
+    try {
+      const res = await fetch(wrap(base), { cache:'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return parseStooqCsv(await res.text());
+    } catch(e){ lastErr = e; }
+  }
+  return { ok:false, error: String(lastErr && lastErr.message || lastErr) };
+}
+
+// Returns a unified data object: { prices:{gold,silver,dxy,gdx,wti,copper,gvz}, fred:{realRate,breakeven} }
+async function getData(){
+  if (WORKER_URL){
+    const res = await fetch(WORKER_URL, { cache:'no-store' });
+    if (!res.ok) throw new Error('Worker HTTP ' + res.status);
+    return await res.json();
+  }
+  // Fallback: public proxies, prices only
+  const prices = {};
+  await Promise.all(Object.entries(FALLBACK_SYMS).map(async ([k,s]) => {
+    prices[k] = await fetchStooqFallback(s);
+  }));
+  return { prices, fred: { realRate:{ok:false}, breakeven:{ok:false} }, fallback:true };
+}
+
+const clamp = v => Math.max(0, Math.min(100, v));
+const fromPct = (pct, scale) => clamp(50 + pct*scale);
+function fmtMoney(v, d=2){ return '$' + v.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtPct(p){ return (p>=0?'+':'') + p.toFixed(2) + '%'; }
+
+function snap(id, valText, pct){
+  const v = document.getElementById('snap-'+id);
+  const c = document.getElementById('snap-'+id+'-chg');
+  if (v) v.textContent = valText;
+  if (c && pct !== undefined){ c.textContent = fmtPct(pct)+' today'; c.className = 'schg ' + (pct>=0?'up':'down'); }
+}
+
+async function fetchLive(){
+  const pill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+  pill.className = 'asof loading';
+  statusText.textContent = 'Fetching live data…';
+
+  let data;
+  try { data = await getData(); }
+  catch(e){
+    pill.className = 'asof stale';
+    statusText.textContent = 'Data fetch failed — showing last values';
+    return;
+  }
+
+  const p = data.prices || {};
+  const f = data.fred || {};
+  let fails = 0, total = 0;
+  const ok = x => x && x.ok;
+
+  // ----- Snapshot tiles -----
+  total++; ok(p.gold)   ? snap('gold', fmtMoney(p.gold.close), p.gold.pct)       : (fails++, snap('gold','—'));
+  total++; ok(p.silver) ? snap('silver', fmtMoney(p.silver.close), p.silver.pct) : (fails++, snap('silver','—'));
+  total++; ok(p.dxy)    ? snap('dxy', p.dxy.close.toFixed(2), p.dxy.pct)         : (fails++, snap('dxy','—'));
+  total++; ok(p.gdx)    ? snap('gdx', fmtMoney(p.gdx.close), p.gdx.pct)          : (fails++, snap('gdx','—'));
+  total++; ok(p.wti)    ? snap('wti', fmtMoney(p.wti.close), p.wti.pct)          : (fails++, snap('wti','—'));
+
+  // ----- LIVE indicator sliders -----
+  // Real rates (DFII10): higher real yield = bearish gold. Neutral ~1.5%.
+  if (ok(f.realRate)){
+    const y = f.realRate.value;
+    setSlider('realrate', clamp(50 + (1.5 - y)*20));
+    setReading('realrate', `DFII10 ${y.toFixed(2)}% (${f.realRate.date}) — ${y>1.5?'restrictive, headwind':'supportive'}`);
+  } else setReading('realrate', WORKER_URL ? 'Feed failed — last value held' : 'Needs the Worker (FRED) — deploy to activate');
+
+  // 5y5y breakeven (T5YIFR): higher = more inflation priced = bullish gold. Neutral ~2.3%.
+  if (ok(f.breakeven)){
+    const b = f.breakeven.value;
+    setSlider('breakeven', clamp(50 + (b - 2.3)*30));
+    setReading('breakeven', `T5YIFR ${b.toFixed(2)}% (${f.breakeven.date})`);
+  } else setReading('breakeven', WORKER_URL ? 'Feed failed — last value held' : 'Needs the Worker (FRED) — deploy to activate');
+
+  // DXY: stronger dollar = bearish gold (today's move).
+  if (ok(p.dxy)){
+    setSlider('dxy', fromPct(-p.dxy.pct, 8));
+    setReading('dxy', `DXY ${p.dxy.close.toFixed(2)} (${fmtPct(p.dxy.pct)} today)`);
+  } else setReading('dxy', 'Feed failed — last value held');
+
+  // Silver/Gold ratio: lower ratio (silver leading) = bullish metals complex.
+  if (ok(p.gold) && ok(p.silver)){
+    const ratio = p.gold.close / p.silver.close;
+    setSlider('sgratio', fromPct(75 - ratio, 1.2));
+    setReading('sgratio', `Ratio ${ratio.toFixed(1)} — ${ratio>80?'silver cheap':ratio<60?'silver hot':'mid-range'}`);
+  } else setReading('sgratio', 'Feed failed — last value held');
+
+  // Copper: rising copper = reflationary, mildly bullish.
+  if (ok(p.copper)){
+    setSlider('copper', fromPct(p.copper.pct, 6));
+    setReading('copper', `Copper ${fmtMoney(p.copper.close,3)} (${fmtPct(p.copper.pct)} today)`);
+  } else setReading('copper', 'Feed failed — last value held');
+
+  // GDX vs gold: miners leading = bullish; lagging = bearish.
+  if (ok(p.gdx) && ok(p.gold)){
+    const lev = p.gdx.pct - p.gold.pct;
+    setSlider('gdxgold', fromPct(lev, 6));
+    setReading('gdxgold', `GDX ${fmtPct(p.gdx.pct)} vs gold ${fmtPct(p.gold.pct)} — ${lev>=0?'miners leading':'miners lagging'}`);
+  } else setReading('gdxgold', 'Feed failed — last value held');
+
+  // WTI: lower oil eases inflation pressure; map mildly (rising oil slightly bullish gold via inflation).
+  if (ok(p.wti)){
+    setSlider('wti', fromPct(p.wti.pct, 5));
+    setReading('wti', `WTI ${fmtMoney(p.wti.close)} (${fmtPct(p.wti.pct)} today)`);
+  } else setReading('wti', 'Feed failed — last value held');
+
+  // GVZ (gold volatility): elevated vol = uncertainty; map mildly bullish for gold.
+  if (ok(p.gvz)){
+    setSlider('gvz', fromPct(p.gvz.pct, 3));
+    setReading('gvz', `GVZ ${p.gvz.close.toFixed(2)} (${fmtPct(p.gvz.pct)} today)`);
+  } else setReading('gvz', 'Feed failed — last value held');
+
+  // ----- Status -----
+  const now = new Date();
+  if (data.fallback && (!ok(f.realRate))){
+    pill.className = fails>0 ? 'asof stale' : 'asof';
+    statusText.textContent = (fails>0 ? `${fails}/${total} prices failed · ` : 'Prices live · ') +
+      'FRED indicators need the Worker · ' + now.toLocaleTimeString();
+  } else if (fails > 0){
+    pill.className = 'asof stale';
+    statusText.textContent = `${fails}/${total} feeds failed — last good data · ` + now.toLocaleTimeString();
+  } else {
+    pill.className = 'asof';
+    statusText.textContent = 'Live — updated ' + now.toLocaleTimeString();
+  }
+
+  compute();
+}
+
+function compute(){
+  let weighted = 0;
+  let totalWeight = 0;
+  allInputs.forEach(s => {
+    const el = document.getElementById('s_' + s.id);
+    let v = parseFloat(el.value);
+    document.getElementById('v_' + s.id).textContent = Math.round(v);
+    if (s.invert) v = 100 - v;
+    weighted += v * s.weight;
+    totalWeight += s.weight;
+  });
+  const score = Math.round(weighted / totalWeight);
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('meterFill').style.width = score + '%';
+  const badge = document.getElementById('signalBadge');
+  badge.className = 'signal-badge';
+  if (score >= 65) { badge.classList.add('bull'); badge.textContent = 'Bullish for gold'; }
+  else if (score <= 35) { badge.classList.add('bear'); badge.textContent = 'Bearish for gold'; }
+  else { badge.classList.add('neutral'); badge.textContent = 'Neutral'; }
+}
+
+function resetManual(){
+  allInputs.filter(s => s.type === 'manual').forEach(s => setSlider(s.id, s.default));
+  compute();
+}
+
+buildUI();
+fetchLive();
+// Refresh automatically every 10 minutes while the tab is open
+setInterval(fetchLive, 10 * 60 * 1000);
+</script>
+</body>
+</html>
