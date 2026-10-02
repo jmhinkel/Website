@@ -1,39 +1,39 @@
 {
-  "asOf": "2026-10-02T18:06:03Z",
+  "asOf": "2026-10-02T22:39:14Z",
   "prices": {
     "gold": {
       "ok": false,
-      "error": "HTTP Error 404: Not Found",
+      "error": "<urlopen error timed out>",
       "symbol": "xauusd"
     },
     "silver": {
       "ok": false,
-      "error": "HTTP Error 404: Not Found",
+      "error": "<urlopen error timed out>",
       "symbol": "xagusd"
     },
     "dxy": {
       "ok": false,
-      "error": "HTTP Error 404: Not Found",
+      "error": "<urlopen error timed out>",
       "symbol": "usdindx"
     },
     "gdx": {
       "ok": false,
-      "error": "HTTP Error 404: Not Found",
+      "error": "<urlopen error timed out>",
       "symbol": "gdx.us"
     },
     "wti": {
       "ok": false,
-      "error": "HTTP Error 404: Not Found",
+      "error": "<urlopen error timed out>",
       "symbol": "cl.f"
     },
     "copper": {
       "ok": false,
-      "error": "HTTP Error 404: Not Found",
+      "error": "<urlopen error timed out>",
       "symbol": "hg.f"
     },
     "gvz": {
       "ok": false,
-      "error": "HTTP Error 404: Not Found",
+      "error": "<urlopen error timed out>",
       "symbol": "^gvz"
     }
   },
